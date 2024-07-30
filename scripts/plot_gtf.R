@@ -16,5 +16,16 @@ plot_gtf <- function(data, fill_by="product") {
   
   # Преобразуем ggplot в plotly
   p_plotly <- ggplotly(p, width = 1000)
+  
+  # Настраиваем расположение легенды в зависимости от значения fill_by
+  if (fill_by != "gene") {
+    p_plotly <- p_plotly %>% layout(legend = list(orientation = "h",   # show entries horizontally
+                                                  xanchor = "left",  # use center of legend as anchor
+                                                  x = 0.5,
+                                                  y=-0.3,
+                                                  width = 800, height = 50)) %>% 
+      style(legendgroup = NULL)
+  }
+  
   return(p_plotly)
 }

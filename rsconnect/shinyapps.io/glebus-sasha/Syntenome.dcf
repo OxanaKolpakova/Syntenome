@@ -1,0 +1,12 @@
+name: Syntenome
+title: Syntenome
+username: glebus-sasha
+account: glebus-sasha
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 12374937
+bundleId: 8916552
+url: https://glebus-sasha.shinyapps.io/Syntenome/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
