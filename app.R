@@ -13,7 +13,6 @@ library(viridis)
 library(data.table)
 library(shinythemes)
 
-
 source("scripts/read_and_combine_gtf.R")
 source("scripts/get_centered_df_by_gene.R")
 source("scripts/get_centered_df_by_product.R")
@@ -52,7 +51,9 @@ ui <- fluidPage(
       checkboxInput("use_tanhize", "Use tanh transformation", value = TRUE),
       radioButtons("color_by", "Color By:",
                    choices = list("Gene" = "gene", "Product" = "product", "Gene Product" = "gene_product"),
-                   selected = "gene")
+                   selected = "gene"),
+      checkboxInput("show_legend", "Show Legend", value = TRUE),  # Добавляем новый элемент управления
+      uiOutput("strain_select_ui")  # Новый UI элемент для выбора штаммов
     ),
     mainPanel(
       tabsetPanel(
@@ -139,6 +140,13 @@ server <- function(input, output, session) {
                 value = if (input$center_by != "none") c(-5000, 5000) else c(min_val, max_val))
   })
   
+  output$strain_select_ui <- renderUI({
+    req(gtf_data())
+    data <- gtf_data()
+    selectInput("selected_strains", "Select Strains to Invert X Axis:", 
+                choices = levels(as.factor(data$strain)), multiple = TRUE)
+  })
+  
   main_plot_data <- reactive({
     req(gtf_data())
     
@@ -176,7 +184,7 @@ server <- function(input, output, session) {
   output$mainPlot <- renderPlotly({
     req(main_plot_data())
     plot <- main_plot_data() %>%
-      plot_gtf(input$color_by)
+      plot_gtf(fill_by = input$color_by, show_legend = input$show_legend, invert_strains = input$selected_strains)  # Передаем параметр invert_strains
     plot  # Return the plotly object directly
   })
 }

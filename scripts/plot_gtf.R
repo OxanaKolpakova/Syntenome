@@ -1,7 +1,14 @@
-plot_gtf <- function(data, fill_by="product") {
+plot_gtf <- function(data, fill_by = "product", show_legend = TRUE, invert_strains = NULL) {
   # Проверяем, существует ли указанный столбец в данных
   if (!fill_by %in% colnames(data)) {
     stop(paste("Столбец", fill_by, "не найден в данных"))
+  }
+  
+  # Инвертируем координаты для указанных штаммов
+  if (!is.null(invert_strains)) {
+    data <- data %>%
+      mutate(recalculated_start = ifelse(strain %in% invert_strains, -recalculated_start, recalculated_start),
+             recalculated_end = ifelse(strain %in% invert_strains, -recalculated_end, recalculated_end))
   }
   
   # Создаем ggplot
@@ -12,20 +19,11 @@ plot_gtf <- function(data, fill_by="product") {
     ) +
     scale_y_continuous(breaks = seq_along(levels(data$strain)), labels = levels(data$strain)) +
     theme_minimal() +
-    labs(x = "Relative Coordinates", y = "Strain", fill = fill_by)
+    labs(x = "Relative Coordinates", y = "Strain", fill = fill_by) +
+    theme(legend.position = if (show_legend) "right" else "none")
   
   # Преобразуем ggplot в plotly
   p_plotly <- ggplotly(p, width = 1000)
-  
-  # Настраиваем расположение легенды в зависимости от значения fill_by
-  if (fill_by != "gene") {
-    p_plotly <- p_plotly %>% layout(legend = list(orientation = "h",   # show entries horizontally
-                                                  xanchor = "left",  # use center of legend as anchor
-                                                  x = 0.5,
-                                                  y=-0.3,
-                                                  width = 800, height = 50)) %>% 
-      style(legendgroup = NULL)
-  }
   
   return(p_plotly)
 }
