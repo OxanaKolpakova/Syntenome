@@ -15,7 +15,8 @@ plot_gtf <- function(data, fill_by = "product", show_legend = TRUE, invert_strai
   p <- ggplot(data) +
     aes(xmin = recalculated_start, xmax = recalculated_end, ymin = as.numeric(strain) - 0.4, ymax = as.numeric(strain) + 0.4, fill = .data[[fill_by]]) +
     geom_rect(
-      color = "black"  # использовать только при малом масштабе
+      color = "black",  # использовать только при малом масштабе
+      size = 0.1  # толщина окантовки
     ) +
     scale_y_continuous(breaks = seq_along(levels(data$strain)), labels = levels(data$strain)) +
     theme_minimal() +
