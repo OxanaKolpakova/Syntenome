@@ -40,9 +40,10 @@ ui <- fluidPage(
                  hr(),
                  h4("Selected Files"),
                  tableOutput("file_list"),  # Вывод списка файлов
-                 actionButton("load_files", "LOAD"),  # Кнопка LOAD теперь под списком файлов
                  actionButton("use_test_data", "Use Test Data"),
-                 actionButton("remove_selected", "Remove Selected Files")
+                 actionButton("remove_selected", "Remove Selected Files"),
+                 hr(),
+                 actionButton("load_files", "LOAD"),  # Кнопка LOAD теперь под списком файлов
                ),
                mainPanel(
                  plotlyOutput("previewPlot", height = "600px")
