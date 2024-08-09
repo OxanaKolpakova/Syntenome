@@ -8,9 +8,6 @@ library(ggplotlyExtra)
 library(scales)
 library(RColorBrewer)
 library(plotly)
-library(transPlotR)
-library(viridis)
-library(data.table)
 library(shinythemes)
 
 source("scripts/get_centered_df_by_gene.R")
@@ -23,6 +20,8 @@ source("scripts/tanhize.R")
 source("scripts/plot_preview.R")
 source("scripts/concatenate_contigs.R")
 
+options(shiny.maxRequestSize = 30 * 1024^2)  # Set maximum upload size
+
 ui <- fluidPage(
   theme = shinytheme("flatly"),
   titlePanel(
@@ -32,40 +31,48 @@ ui <- fluidPage(
       style = "text-align: left;"
     )
   ),
-  sidebarLayout(
-    sidebarPanel(
-      h4("Data Options"),
-      fileInput("gtf_files", "Choose GTF Files", multiple = TRUE, accept = ".gtf"),
-      hr(),
-      h4("Selected Files"),
-      tableOutput("file_list"),  # Вывод списка файлов
-      actionButton("load_files", "LOAD"),  # Кнопка LOAD теперь под списком файлов
-      actionButton("use_test_data", "Use Test Data"),
-      actionButton("remove_selected", "Remove Selected Files"),
-      hr(),
-      h4("Plot Options"),
-      radioButtons("center_by", "Center by:",
-                   choices = list("None" = "none", "Gene" = "gene", "Product" = "product"),
-                   selected = "none"),
-      uiOutput("center_name_ui"),
-      checkboxInput("filter_coordinates", "Filter by Coordinates", value = TRUE),
-      uiOutput("coord_slider_ui"),
-      checkboxInput("use_tanhize", "Use tanh transformation", value = TRUE),
-      radioButtons("color_by", "Color By:",
-                   choices = list("Gene" = "gene", "Product" = "product", "Gene Product" = "gene_product"),
-                   selected = "gene"),
-      checkboxInput("show_legend", "Show Legend", value = TRUE),
-      uiOutput("strain_select_ui")
+  tabsetPanel(
+    tabPanel("Data & Preview",
+             sidebarLayout(
+               sidebarPanel(
+                 h4("Data Options"),
+                 fileInput("gtf_files", "Choose GTF Files", multiple = TRUE, accept = ".gtf"),
+                 hr(),
+                 h4("Selected Files"),
+                 tableOutput("file_list"),  # Вывод списка файлов
+                 actionButton("load_files", "LOAD"),  # Кнопка LOAD теперь под списком файлов
+                 actionButton("use_test_data", "Use Test Data"),
+                 actionButton("remove_selected", "Remove Selected Files")
+               ),
+               mainPanel(
+                 plotlyOutput("previewPlot", height = "600px")
+               )
+             )
     ),
-    mainPanel(
-      tabsetPanel(
-        tabPanel("Preview", plotlyOutput("previewPlot", height = "600px")),
-        tabPanel("Main View", plotlyOutput("mainPlot", height = "600px"))
-      )
+    tabPanel("Plot Options & Main View",
+             sidebarLayout(
+               sidebarPanel(
+                 h4("Plot Options"),
+                 radioButtons("center_by", "Center by:",
+                              choices = list("None" = "none", "Gene" = "gene", "Product" = "product"),
+                              selected = "none"),
+                 uiOutput("center_name_ui"),
+                 checkboxInput("filter_coordinates", "Filter by Coordinates", value = TRUE),
+                 uiOutput("coord_slider_ui"),
+                 checkboxInput("use_tanhize", "Use tanh transformation", value = TRUE),
+                 radioButtons("color_by", "Color By:",
+                              choices = list("Gene" = "gene", "Product" = "product", "Gene Product" = "gene_product"),
+                              selected = "gene"),
+                 checkboxInput("show_legend", "Show Legend", value = TRUE),
+                 uiOutput("strain_select_ui")
+               ),
+               mainPanel(
+                 plotlyOutput("mainPlot", height = "600px")
+               )
+             )
     )
   )
 )
-
 
 server <- function(input, output, session) {
   
