@@ -13,7 +13,6 @@ library(viridis)
 library(data.table)
 library(shinythemes)
 
-source("scripts/read_and_combine_gtf.R")
 source("scripts/get_centered_df_by_gene.R")
 source("scripts/get_centered_df_by_product.R")
 source("scripts/create_contig_boundaries.R")
@@ -24,10 +23,8 @@ source("scripts/tanhize.R")
 source("scripts/plot_preview.R")
 source("scripts/concatenate_contigs.R")
 
-options(shiny.maxRequestSize = 100 * 1024^2)  # Set maximum upload size
-
 ui <- fluidPage(
-  theme = shinytheme("flatly"),  # Установка темы
+  theme = shinytheme("flatly"),
   titlePanel(
     div(
       h1("Syntenome"),
@@ -38,8 +35,12 @@ ui <- fluidPage(
   sidebarLayout(
     sidebarPanel(
       h4("Data Options"),
-      shinyDirButton("folder", "Select Folder", "Please select a folder with GTF files"),
-      actionButton("use_test_data", "Use Test Data"),
+      fileInput("gtf_files", "Choose GTF Files", multiple = TRUE, accept = ".gtf"),
+      actionButton("remove_selected", "Remove Selected Files"),
+      hr(),
+      h4("Selected Files"),
+      tableOutput("file_list"),  # Вывод списка файлов
+      actionButton("load_files", "LOAD"),  # Кнопка LOAD теперь под списком файлов
       hr(),
       h4("Plot Options"),
       radioButtons("center_by", "Center by:",
@@ -52,8 +53,8 @@ ui <- fluidPage(
       radioButtons("color_by", "Color By:",
                    choices = list("Gene" = "gene", "Product" = "product", "Gene Product" = "gene_product"),
                    selected = "gene"),
-      checkboxInput("show_legend", "Show Legend", value = TRUE),  # Добавляем новый элемент управления
-      uiOutput("strain_select_ui")  # Новый UI элемент для выбора штаммов
+      checkboxInput("show_legend", "Show Legend", value = TRUE),
+      uiOutput("strain_select_ui")
     ),
     mainPanel(
       tabsetPanel(
@@ -64,37 +65,61 @@ ui <- fluidPage(
   )
 )
 
+
 server <- function(input, output, session) {
   
-  roots <- if (.Platform$OS.type == "windows") {
-    setNames(
-      c(
-        normalizePath("~"),  # Home directory
-        normalizePath("."),  # Current working directory
-        paste0(LETTERS, ":/")  # Drives from A: to Z:
-      ),
-      c("home", "wd", paste0(LETTERS, ":"))
-    )
-  } else {
-    c(home = normalizePath("~"), wd = normalizePath("."), root = "/")
-  }
-  
-  shinyDirChoose(input, "folder", roots = roots)
-  
-  selected_dir <- reactive({
-    parseDirPath(roots = roots, input$folder)
-  })
-  
   gtf_data <- reactiveVal(NULL)
+  selected_files <- reactiveVal(data.frame(name = character(), datapath = character(), stringsAsFactors = FALSE))
   
-  observeEvent(selected_dir(), {
-    req(selected_dir())
-    gtf_data(read_and_combine_gtf(selected_dir()))
+  observeEvent(input$gtf_files, {
+    req(input$gtf_files)
+    
+    # Добавляем новые файлы к текущему списку сразу после их выбора
+    new_files <- data.frame(name = input$gtf_files$name, datapath = input$gtf_files$datapath, stringsAsFactors = FALSE)
+    updated_files <- rbind(selected_files(), new_files)
+    
+    # Обновляем список файлов
+    selected_files(updated_files)
   })
   
-  observeEvent(input$use_test_data, {
-    test_data_dir <- "test_data"  # Specify the path to your test data
-    gtf_data(read_and_combine_gtf(test_data_dir))
+  observeEvent(input$remove_selected, {
+    req(input$selected_files)
+    
+    # Удаляем выбранные файлы из списка
+    remaining_files <- selected_files()[!selected_files()$name %in% input$selected_files, ]
+    selected_files(remaining_files)
+  })
+  
+  observeEvent(input$load_files, {
+    req(input$selected_files)
+    
+    # Загружаем только выбранные файлы
+    files_to_load <- selected_files() %>% filter(name %in% input$selected_files)
+    
+    combined_gtf <- map_df(seq_len(nrow(files_to_load)), function(i) {
+      file_path <- files_to_load$datapath[i]
+      strain <- sub("\\.gtf$", "", files_to_load$name[i])
+      
+      # Импортируем GTF-файл и добавляем столбец strain
+      gtf_data <- import(file_path)
+      gtf_data <- as_tibble(gtf_data) %>% 
+        mutate(strain = strain)
+      
+      return(gtf_data)
+    })
+    
+    # Фильтруем только записи типа CDS и добавляем столбец gene_product
+    combined_gtf <- combined_gtf %>% 
+      filter(type == "CDS") %>%
+      mutate(gene_product = paste(gene, product, sep = "|"))
+    
+    gtf_data(combined_gtf)
+  })
+  
+  output$file_list <- renderUI({
+    checkboxGroupInput("selected_files", "", 
+                       choices = selected_files()$name,
+                       selected = selected_files()$name)  # По умолчанию выбираем все файлы
   })
   
   output$previewPlot <- renderPlotly({
@@ -105,8 +130,8 @@ server <- function(input, output, session) {
       mutate(
         strain = as.factor(strain)
       ) %>%
-      plot_preview()  # Returns a ggplotly object
-    plot  # Return the plotly object directly
+      plot_preview()
+    plot
   })
   
   output$center_name_ui <- renderUI({
@@ -156,13 +181,13 @@ server <- function(input, output, session) {
     if (input$center_by == "gene") {
       req(input$center_name)
       if (input$center_name == "") {
-        return(NULL)  # Return NULL if center name is not provided
+        return(NULL)
       }
       data <- data %>% get_centered_df_by_gene(input$center_name)
     } else if (input$center_by == "product") {
       req(input$center_name)
       if (input$center_name == "") {
-        return(NULL)  # Return NULL if center name is not provided
+        return(NULL)
       }
       data <- data %>% get_centered_df_by_product(input$center_name)
     }
@@ -184,8 +209,8 @@ server <- function(input, output, session) {
   output$mainPlot <- renderPlotly({
     req(main_plot_data())
     plot <- main_plot_data() %>%
-      plot_gtf(fill_by = input$color_by, show_legend = input$show_legend, invert_strains = input$selected_strains)  # Передаем параметр invert_strains
-    plot  # Return the plotly object directly
+      plot_gtf(fill_by = input$color_by, show_legend = input$show_legend, invert_strains = input$selected_strains)
+    plot
   })
 }
 
