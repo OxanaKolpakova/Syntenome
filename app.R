@@ -36,11 +36,12 @@ ui <- fluidPage(
     sidebarPanel(
       h4("Data Options"),
       fileInput("gtf_files", "Choose GTF Files", multiple = TRUE, accept = ".gtf"),
-      actionButton("remove_selected", "Remove Selected Files"),
       hr(),
       h4("Selected Files"),
       tableOutput("file_list"),  # Вывод списка файлов
       actionButton("load_files", "LOAD"),  # Кнопка LOAD теперь под списком файлов
+      actionButton("use_test_data", "Use Test Data"),
+      actionButton("remove_selected", "Remove Selected Files"),
       hr(),
       h4("Plot Options"),
       radioButtons("center_by", "Center by:",
@@ -114,6 +115,22 @@ server <- function(input, output, session) {
       mutate(gene_product = paste(gene, product, sep = "|"))
     
     gtf_data(combined_gtf)
+  })
+  
+  observeEvent(input$use_test_data, {
+    test_data_dir <- "./test_data"  # Путь к тестовым данным
+    
+    # Получение списка файлов GTF в папке
+    test_files <- list.files(path = test_data_dir, pattern = "\\.gtf$", full.names = TRUE)
+    
+    # Извлечение имен файлов для отображения
+    test_file_names <- basename(test_files)
+    
+    # Добавление тестовых данных к выбранным файлам
+    selected_files(rbind(
+      selected_files(), 
+      data.frame(name = test_file_names, datapath = test_files, stringsAsFactors = FALSE)
+    ))
   })
   
   output$file_list <- renderUI({
