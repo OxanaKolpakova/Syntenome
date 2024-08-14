@@ -62,7 +62,10 @@ ui <- fluidPage(
                  uiOutput("coord_slider_ui"),
                  checkboxInput("use_tanhize", "Use tanh transformation", value = TRUE),
                  radioButtons("color_by", "Color By:",
-                              choices = list("Gene" = "gene", "Product" = "product", "Gene Product" = "gene_product"),
+                              choices = list("Gene" = "gene", "Product" = "product", 
+                                             "Gene Product" = "gene_product", "Gene ID" = "gene_id", 
+                                             "Strand" = "strand", "GB Key" = "gbkey", 
+                                             "Locus Tag" = "locus_tag"),
                               selected = "gene"),
                  checkboxInput("show_legend", "Show Legend", value = TRUE),
                  uiOutput("strain_select_ui")
