@@ -1,27 +1,3 @@
-library(shiny)
-library(shinyFiles)
-library(dplyr)
-library(ggplot2)
-library(tidyverse)
-library(rtracklayer)
-library(ggplotlyExtra)
-library(scales)
-library(RColorBrewer)
-library(plotly)
-library(shinythemes)
-
-source("scripts/get_centered_df_by_gene.R")
-source("scripts/get_centered_df_by_product.R")
-source("scripts/create_contig_boundaries.R")
-source("scripts/filter_by_coordinates.R")
-source("scripts/plot_gtf.R")
-source("scripts/sigmotize.R")
-source("scripts/tanhize.R")
-source("scripts/plot_preview.R")
-source("scripts/concatenate_contigs.R")
-
-options(shiny.maxRequestSize = 30 * 1024^2)  # Set maximum upload size
-
 ui <- fluidPage(
   theme = shinytheme("flatly"),
   titlePanel(
@@ -39,11 +15,11 @@ ui <- fluidPage(
                  fileInput("gtf_files", "Choose GTF Files", multiple = TRUE, accept = ".gtf"),
                  hr(),
                  h4("Selected Files"),
-                 tableOutput("file_list"),  # Вывод списка файлов
+                 tableOutput("file_list"),
                  actionButton("use_test_data", "Use Test Data"),
                  actionButton("remove_selected", "Remove Selected Files"),
                  hr(),
-                 actionButton("load_files", "LOAD"),  # Кнопка LOAD теперь под списком файлов
+                 actionButton("load_files", "LOAD"),
                ),
                mainPanel(
                  plotlyOutput("previewPlot", height = "600px")
@@ -68,7 +44,12 @@ ui <- fluidPage(
                                              "Locus Tag" = "locus_tag"),
                               selected = "gene"),
                  checkboxInput("show_legend", "Show Legend", value = TRUE),
-                 uiOutput("strain_select_ui")
+                 hr(),
+                 h4("Track Options"),
+                 uiOutput("strain_select_ui"),
+                 checkboxGroupInput("hide_tracks", "Select Tracks to Hide:", 
+                                    choices = NULL,
+                                    selected = NULL)
                ),
                mainPanel(
                  plotlyOutput("mainPlot", height = "600px")
@@ -86,18 +67,15 @@ server <- function(input, output, session) {
   observeEvent(input$gtf_files, {
     req(input$gtf_files)
     
-    # Добавляем новые файлы к текущему списку сразу после их выбора
     new_files <- data.frame(name = input$gtf_files$name, datapath = input$gtf_files$datapath, stringsAsFactors = FALSE)
     updated_files <- rbind(selected_files(), new_files)
     
-    # Обновляем список файлов
     selected_files(updated_files)
   })
   
   observeEvent(input$remove_selected, {
     req(input$selected_files)
     
-    # Удаляем выбранные файлы из списка
     remaining_files <- selected_files()[!selected_files()$name %in% input$selected_files, ]
     selected_files(remaining_files)
   })
@@ -105,14 +83,12 @@ server <- function(input, output, session) {
   observeEvent(input$load_files, {
     req(input$selected_files)
     
-    # Загружаем только выбранные файлы
     files_to_load <- selected_files() %>% filter(name %in% input$selected_files)
     
     combined_gtf <- map_df(seq_len(nrow(files_to_load)), function(i) {
       file_path <- files_to_load$datapath[i]
       strain <- sub("\\.gtf$", "", files_to_load$name[i])
       
-      # Импортируем GTF-файл и добавляем столбец strain
       gtf_data <- import(file_path)
       gtf_data <- as_tibble(gtf_data) %>% 
         mutate(strain = strain)
@@ -120,7 +96,6 @@ server <- function(input, output, session) {
       return(gtf_data)
     })
     
-    # Фильтруем только записи типа CDS и добавляем столбец gene_product
     combined_gtf <- combined_gtf %>% 
       filter(type == "CDS") %>%
       mutate(gene_product = paste(gene, product, sep = "|"))
@@ -129,15 +104,11 @@ server <- function(input, output, session) {
   })
   
   observeEvent(input$use_test_data, {
-    test_data_dir <- "./test_data"  # Путь к тестовым данным
+    test_data_dir <- "./test_data"
     
-    # Получение списка файлов GTF в папке
     test_files <- list.files(path = test_data_dir, pattern = "\\.gtf$", full.names = TRUE)
-    
-    # Извлечение имен файлов для отображения
     test_file_names <- basename(test_files)
     
-    # Добавление тестовых данных к выбранным файлам
     selected_files(rbind(
       selected_files(), 
       data.frame(name = test_file_names, datapath = test_files, stringsAsFactors = FALSE)
@@ -147,7 +118,7 @@ server <- function(input, output, session) {
   output$file_list <- renderUI({
     checkboxGroupInput("selected_files", "", 
                        choices = selected_files()$name,
-                       selected = selected_files()$name)  # По умолчанию выбираем все файлы
+                       selected = selected_files()$name)
   })
   
   output$previewPlot <- renderPlotly({
@@ -194,15 +165,17 @@ server <- function(input, output, session) {
   })
   
   output$strain_select_ui <- renderUI({
-    req(main_plot_data())  # Используем main_plot_data() для учета центрирования
+    req(main_plot_data())
     data <- main_plot_data()
     
-    # Создаем идентификаторы треков
     track_ids <- unique(data$strain)
     
-    checkboxGroupInput("selected_tracks", "Select Tracks to Invert X Axis:", 
-                       choices = setNames(track_ids, track_ids),
-                       selected = NULL)  # По умолчанию ничего не выбрано
+    updateCheckboxGroupInput(session, "invert_tracks", choices = setNames(track_ids, track_ids))
+    updateCheckboxGroupInput(session, "hide_tracks", choices = setNames(track_ids, track_ids))
+    
+    checkboxGroupInput("invert_tracks", "Select Tracks to Invert X Axis:", 
+                       choices = track_ids,
+                       selected = NULL)
   })
   
   main_plot_data <- reactive({
@@ -242,19 +215,21 @@ server <- function(input, output, session) {
   output$mainPlot <- renderPlotly({
     req(main_plot_data())
     
-    # Получаем данные для построения графика
     plot_data <- main_plot_data()
     
-    # Проверяем, есть ли выбранные треки для инверсии
-    if (!is.null(input$selected_tracks)) {
+    if (!is.null(input$invert_tracks)) {
       plot_data <- plot_data %>%
         mutate(
-          recalculated_start = ifelse(strain %in% input$selected_tracks, -recalculated_start, recalculated_start),
-          recalculated_end = ifelse(strain %in% input$selected_tracks, -recalculated_end, recalculated_end)
+          recalculated_start = ifelse(strain %in% input$invert_tracks, -recalculated_start, recalculated_start),
+          recalculated_end = ifelse(strain %in% input$invert_tracks, -recalculated_end, recalculated_end)
         )
     }
     
-    # Строим график
+    if (!is.null(input$hide_tracks)) {
+      plot_data <- plot_data %>%
+        filter(!strain %in% input$hide_tracks)
+    }
+    
     plot <- plot_data %>%
       plot_gtf(fill_by = input$color_by, show_legend = input$show_legend)
     
