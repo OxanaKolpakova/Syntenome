@@ -200,8 +200,9 @@ server <- function(input, output, session) {
     # Создаем идентификаторы треков
     track_ids <- unique(data$strain)
     
-    selectInput("selected_tracks", "Select Tracks to Invert X Axis:", 
-                choices = track_ids, multiple = TRUE)
+    checkboxGroupInput("selected_tracks", "Select Tracks to Invert X Axis:", 
+                       choices = setNames(track_ids, track_ids),
+                       selected = NULL)  # По умолчанию ничего не выбрано
   })
   
   main_plot_data <- reactive({
