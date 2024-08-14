@@ -1,3 +1,27 @@
+library(shiny)
+library(shinyFiles)
+library(dplyr)
+library(ggplot2)
+library(tidyverse)
+library(rtracklayer)
+library(ggplotlyExtra)
+library(scales)
+library(RColorBrewer)
+library(plotly)
+library(shinythemes)
+
+source("scripts/get_centered_df_by_gene.R")
+source("scripts/get_centered_df_by_product.R")
+source("scripts/create_contig_boundaries.R")
+source("scripts/filter_by_coordinates.R")
+source("scripts/plot_gtf.R")
+source("scripts/sigmotize.R")
+source("scripts/tanhize.R")
+source("scripts/plot_preview.R")
+source("scripts/concatenate_contigs.R")
+
+options(shiny.maxRequestSize = 30 * 1024^2)  # Set maximum upload size
+
 ui <- fluidPage(
   theme = shinytheme("flatly"),
   titlePanel(
