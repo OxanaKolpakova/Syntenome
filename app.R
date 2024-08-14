@@ -194,10 +194,14 @@ server <- function(input, output, session) {
   })
   
   output$strain_select_ui <- renderUI({
-    req(gtf_data())
-    data <- gtf_data()
-    selectInput("selected_strains", "Select Strains to Invert X Axis:", 
-                choices = levels(as.factor(data$strain)), multiple = TRUE)
+    req(main_plot_data())  # Используем main_plot_data() для учета центрирования
+    data <- main_plot_data()
+    
+    # Создаем идентификаторы треков
+    track_ids <- unique(data$strain)
+    
+    selectInput("selected_tracks", "Select Tracks to Invert X Axis:", 
+                choices = track_ids, multiple = TRUE)
   })
   
   main_plot_data <- reactive({
@@ -236,8 +240,23 @@ server <- function(input, output, session) {
   
   output$mainPlot <- renderPlotly({
     req(main_plot_data())
-    plot <- main_plot_data() %>%
-      plot_gtf(fill_by = input$color_by, show_legend = input$show_legend, invert_strains = input$selected_strains)
+    
+    # Получаем данные для построения графика
+    plot_data <- main_plot_data()
+    
+    # Проверяем, есть ли выбранные треки для инверсии
+    if (!is.null(input$selected_tracks)) {
+      plot_data <- plot_data %>%
+        mutate(
+          recalculated_start = ifelse(strain %in% input$selected_tracks, -recalculated_start, recalculated_start),
+          recalculated_end = ifelse(strain %in% input$selected_tracks, -recalculated_end, recalculated_end)
+        )
+    }
+    
+    # Строим график
+    plot <- plot_data %>%
+      plot_gtf(fill_by = input$color_by, show_legend = input$show_legend)
+    
     plot
   })
 }
