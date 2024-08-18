@@ -179,16 +179,53 @@ server <- function(input, output, session) {
     c(min(data$start, na.rm = TRUE), max(data$end, na.rm = TRUE))
   })
   
+  # Add the numeric input fields in the UI
   output$coord_slider_ui <- renderUI({
     req(coord_range())
     min_val <- coord_range()[1]
     max_val <- coord_range()[2]
     
-    sliderInput("coord_range", "Coordinate Range (bp):",
-                min = if (input$center_by != "none") -abs(max(abs(min_val), abs(max_val))) else min_val,
-                max = if (input$center_by != "none") abs(max(abs(min_val), abs(max_val))) else max_val,
-                value = if (input$center_by != "none") c(-5000, 5000) else c(min_val, max_val))
+    fluidRow(
+      column(4,
+             numericInput("coord_range_min", "Min Coordinate (bp):",
+                          value = if (input$center_by != "none") -5000 else min_val,
+                          min = if (input$center_by != "none") -abs(max(abs(min_val), abs(max_val))) else min_val,
+                          max = if (input$center_by != "none") abs(max(abs(min_val), abs(max_val))) else max_val,
+                          step = 1)),
+      column(4,
+             numericInput("coord_range_max", "Max Coordinate (bp):",
+                          value = if (input$center_by != "none") 5000 else max_val,
+                          min = if (input$center_by != "none") -abs(max(abs(min_val), abs(max_val))) else min_val,
+                          max = if (input$center_by != "none") abs(max(abs(min_val), abs(max_val))) else max_val,
+                          step = 1)),
+      column(4,
+             sliderInput("coord_range", "Coordinate Range (bp):",
+                         min = if (input$center_by != "none") -abs(max(abs(min_val), abs(max_val))) else min_val,
+                         max = if (input$center_by != "none") abs(max(abs(min_val), abs(max_val))) else max_val,
+                         value = c(if (input$center_by != "none") -5000 else min_val,
+                                   if (input$center_by != "none") 5000 else max_val),
+                         step = 1))
+    )
   })
+  
+  # Observe the changes in numeric inputs and update the slider
+  observeEvent(input$coord_range_min, {
+    req(input$coord_range_min, input$coord_range_max)
+    updateSliderInput(session, "coord_range", value = c(input$coord_range_min, input$coord_range_max))
+  })
+  
+  observeEvent(input$coord_range_max, {
+    req(input$coord_range_min, input$coord_range_max)
+    updateSliderInput(session, "coord_range", value = c(input$coord_range_min, input$coord_range_max))
+  })
+  
+  # Observe the changes in slider and update numeric inputs
+  observeEvent(input$coord_range, {
+    req(input$coord_range)
+    updateNumericInput(session, "coord_range_min", value = input$coord_range[1])
+    updateNumericInput(session, "coord_range_max", value = input$coord_range[2])
+  })
+  
   
   output$strain_select_ui <- renderUI({
     req(main_plot_data())

@@ -22,7 +22,7 @@ plot_gtf <- function(data, fill_by = "product", show_legend = TRUE,
     ) +
     scale_y_continuous(breaks = seq_along(levels(data$strain)), labels = levels(data$strain)) +
     theme_minimal() +
-    labs(x = "Relative Coordinates", y = "Strain", fill = fill_by) +
+    labs(x = "Coordinates", y = "Strain", fill = fill_by) +
     theme(legend.position = if (show_legend) "right" else "none")
   
   if (show_strand) {
