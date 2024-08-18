@@ -184,7 +184,7 @@ server <- function(input, output, session) {
     min_val <- coord_range()[1]
     max_val <- coord_range()[2]
     
-    sliderInput("coord_range", "Coordinate Range:",
+    sliderInput("coord_range", "Coordinate Range (bp):",
                 min = if (input$center_by != "none") -abs(max(abs(min_val), abs(max_val))) else min_val,
                 max = if (input$center_by != "none") abs(max(abs(min_val), abs(max_val))) else max_val,
                 value = if (input$center_by != "none") c(-5000, 5000) else c(min_val, max_val))
@@ -257,7 +257,10 @@ server <- function(input, output, session) {
     }
     
     plot <- plot_data %>%
-      plot_gtf(fill_by = input$color_by, show_legend = input$show_legend)
+      plot_gtf(fill_by = input$color_by, 
+               show_legend = input$show_legend,
+               show_border = input$show_borders,
+               show_strand = input$show_strand_directions)
     
     plot
   })
