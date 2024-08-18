@@ -64,7 +64,7 @@ ui <- fluidPage(
                  selectInput("color_by", "Color By:",
                              choices = list("Gene" = "gene", "Product" = "product", 
                                             "Gene Product" = "gene_product", "Gene ID" = "gene_id", 
-                                            "Strand" = "strand", "GB Key" = "gbkey", 
+                                            "Protein ID" = "protein_id", "Strand" = "strand", "GB Key" = "gbkey", 
                                             "Locus Tag" = "locus_tag"),
                              selected = "gene"),
                  checkboxInput("show_legend", "Show Legend", value = TRUE),
