@@ -179,51 +179,28 @@ server <- function(input, output, session) {
     c(min(data$start, na.rm = TRUE), max(data$end, na.rm = TRUE))
   })
   
-  # Add the numeric input fields in the UI
+  # Updated UI for coordinate range input without displaying min/max
   output$coord_slider_ui <- renderUI({
     req(coord_range())
     min_val <- coord_range()[1]
     max_val <- coord_range()[2]
     
-    fluidRow(
-      column(4,
-             numericInput("coord_range_min", "Min Coordinate (bp):",
-                          value = if (input$center_by != "none") -5000 else min_val,
-                          min = if (input$center_by != "none") -abs(max(abs(min_val), abs(max_val))) else min_val,
-                          max = if (input$center_by != "none") abs(max(abs(min_val), abs(max_val))) else max_val,
-                          step = 1)),
-      column(4,
-             numericInput("coord_range_max", "Max Coordinate (bp):",
-                          value = if (input$center_by != "none") 5000 else max_val,
-                          min = if (input$center_by != "none") -abs(max(abs(min_val), abs(max_val))) else min_val,
-                          max = if (input$center_by != "none") abs(max(abs(min_val), abs(max_val))) else max_val,
-                          step = 1)),
-      column(4,
-             sliderInput("coord_range", "Coordinate Range (bp):",
-                         min = if (input$center_by != "none") -abs(max(abs(min_val), abs(max_val))) else min_val,
-                         max = if (input$center_by != "none") abs(max(abs(min_val), abs(max_val))) else max_val,
-                         value = c(if (input$center_by != "none") -5000 else min_val,
-                                   if (input$center_by != "none") 5000 else max_val),
-                         step = 1))
+    tagList(
+      fluidRow(
+        column(6,
+               numericInput("coord_min", "View Start (bp):", 
+                            value = if (input$center_by != "none") -5000 else min_val, 
+                            min = if (input$center_by != "none") -abs(max(abs(min_val), abs(max_val))) else min_val, 
+                            max = max_val)
+        ),
+        column(6,
+               numericInput("coord_max", "View End (bp):", 
+                            value = if (input$center_by != "none") 5000 else max_val, 
+                            min = min_val, 
+                            max = if (input$center_by != "none") abs(max(abs(min_val), abs(max_val))) else max_val)
+        )
+      )
     )
-  })
-  
-  # Observe the changes in numeric inputs and update the slider
-  observeEvent(input$coord_range_min, {
-    req(input$coord_range_min, input$coord_range_max)
-    updateSliderInput(session, "coord_range", value = c(input$coord_range_min, input$coord_range_max))
-  })
-  
-  observeEvent(input$coord_range_max, {
-    req(input$coord_range_min, input$coord_range_max)
-    updateSliderInput(session, "coord_range", value = c(input$coord_range_min, input$coord_range_max))
-  })
-  
-  # Observe the changes in slider and update numeric inputs
-  observeEvent(input$coord_range, {
-    req(input$coord_range)
-    updateNumericInput(session, "coord_range_min", value = input$coord_range[1])
-    updateNumericInput(session, "coord_range_max", value = input$coord_range[2])
   })
   
   
@@ -241,6 +218,7 @@ server <- function(input, output, session) {
                        selected = NULL)
   })
   
+  # Update the filtering function to use the new manual inputs
   main_plot_data <- reactive({
     req(gtf_data())
     
@@ -262,8 +240,8 @@ server <- function(input, output, session) {
     }
     
     if (input$filter_coordinates) {
-      req(input$coord_range)
-      data <- data %>% filter_by_coordinates(input$coord_range[1], input$coord_range[2])
+      req(input$coord_min, input$coord_max)
+      data <- data %>% filter_by_coordinates(input$coord_min, input$coord_max)
     }
     
     if (input$use_tanhize) {
