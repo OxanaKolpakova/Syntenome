@@ -12,6 +12,11 @@ This Shiny app is designed for analyzing GTF data. It provides options to load G
 - `.gitignore`: Specifies files and folders to ignore in the Git repository.
 - `LICENSE`: License for the project (optional).
 
+## Contributors
+
+- Oxana Kolpakova ([@OxanaKolpakova](https://github.com/OxanaKolpakova))
+- Glebus Aleksandr ([@glebus-sasha](https://github.com/glebus-sasha/))
+
 ## Installation
 1. Clone the repository:
    ```sh
